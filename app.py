@@ -1,15 +1,14 @@
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from random import randint, choice
-from werkzeug.utils import secure_filename
 import os
-import pickle
-import csv
+from config import Config
+
+
+
 
 app = Flask(__name__)
-
-app.secret_key = 'my-secret-key'
-
+app.config.from_object(Config)
 
 ##Setup the Database:
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -48,3 +47,8 @@ def get_users():
 @app.route('/')
 def welcome():
     return render_template('welcome.html', user=get_users())
+
+
+@app.route('/login', methods=['GET','POST'])
+def login():
+    return render_template('login.html', user=get_users())
