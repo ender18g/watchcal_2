@@ -8,7 +8,7 @@ import csv
 
 app = Flask(__name__)
 
-app.secret_key = os.urandom(12)
+app.secret_key = 'my-secret-key'
 
 
 ##Setup the Database:
