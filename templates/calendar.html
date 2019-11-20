@@ -1,0 +1,37 @@
+{%extends "base.html"%}
+
+{%block content%}
+
+<h3 class="p-4">{{user.name}} - {{user.points}} points</h3>
+
+
+<table class="table table-bordered">
+
+    <thead class="table-secondary">
+        {%for day in calendar.days_of_week%}
+        <th scope="col">{{day}}</th>
+        {%endfor%}
+    </thead>
+
+    <tbody>
+
+        {%for day in calendar.date_list%}
+        {%if day.weekday==0%}
+        <tr class="calendar_block">
+        {%endif%}
+            <td>{{day.day}}
+
+            </td>
+
+        {%if day.weekday()==6%}
+        </tr>
+        {%endif%}
+        {%endfor%}
+
+    </tbody>
+
+</table>
+
+
+
+{%endblock%}

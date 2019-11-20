@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from random import randint, choice
 import os
 from config import Config
+from datetime import date, timedelta
+from calendar import monthrange
 
 
 
@@ -38,17 +40,34 @@ class User(db.Model):
         return str(self.side)
 
 
-def get_users():
+def get_user():
     return { 'id':0, 'name':"Allan Elsberry", "points":0,"phone":2059015853, "email":'allan.elsberry@gmail.com',"trained":True}
 
+def get_calendar(day=date.today()):
+    calendar = {}
+    days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
+    day= day-timedelta(days=(day.day-1)) #get beginning of month
+    start_date = day-timedelta(days=day.weekday())
+    date_list = [start_date+timedelta(days=n) for n in range(monthrange(start_date.year,start_date.month)[1])]
+    calendar.update({'date_list':date_list})
+    calendar.update({'days_of_week':days_of_week})
+    return calendar
+    
 
 
+
+
+########################  Routes ########################
 
 @app.route('/')
 def welcome():
-    return render_template('welcome.html', user=get_users())
+    return render_template('welcome.html', user=get_user())
 
 
 @app.route('/login', methods=['GET','POST'])
 def login():
-    return render_template('login.html', user=get_users())
+    return render_template('login.html', user=get_user())
+
+@app.route('/calendar')
+def calendar():
+    return render_template('calendar.html', user=get_user(), calendar = get_calendar())
