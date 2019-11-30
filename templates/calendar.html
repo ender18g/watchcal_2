@@ -8,28 +8,30 @@
 <table class="table table-bordered">
 
     <thead class="table-secondary">
-        {%for day in calendar.days_of_week%}
+        {%for day in days_of_week%}
         <th scope="col">{{day}}</th>
         {%endfor%}
     </thead>
+    <form action="" method="POST">
+        <tbody>
+            {%for day in calendar%}
+            {%if day.date.weekday==0%}
+            <tr class="calendar_block">
+                {%endif%}
+                <td id={{day.id}}>{{day.date.strftime("%d %b")}}
+                    <p>ID: {{day.id}}</p>
+                    <p>Points: {{day.value}}</p>
+                    <div class="form-group row">
+                        Bid: <input type="text" name="" id="">{{day.bid[user.id]}}</input>
+                    </div>
+                </td>
 
-    <tbody>
-
-        {%for day in calendar.date_list%}
-        {%if day.weekday==0%}
-        <tr class="calendar_block">
+                {%if day.date.weekday()==6%}
+            </tr>
             {%endif%}
-            <td >{{day.strftime("%d %b")}}
-
-            </td>
-
-            {%if day.weekday()==6%}
-        </tr>
-        {%endif%}
-        {%endfor%}
-
-    </tbody>
-
+            {%endfor%}
+        </tbody>
+    </form>
 </table>
 
 <script>
