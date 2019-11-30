@@ -5,6 +5,8 @@ import os
 from config import Config
 from datetime import date, timedelta
 from calendar import monthrange
+from flask_migrate import Migrate
+
 
 
 
@@ -20,40 +22,46 @@ app.config['SQLALCHEMY_DATABASE_URI'] = \
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+migrate = Migrate(app,db)
+full_calendar = [date(2019,1,1) + timedelta(days=n) for n in range(365*15)]
 
 class User(db.Model):
-    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), nullable=False)
-    # side = db.Column(db.Integer, index=True)
-    # parking = db.Column(db.Integer, default=0)
-    # fuel = db.Column(db.Boolean, default=False)
-    # dta = db.Column(db.Boolean, default=False)
-    # arm = db.Column(db.Boolean, default=False)
-    # notes = db.Column(db.String(512), nullable=True)
-    # flying = db.Column(db.Boolean, default=False)
-    # ordnance = db.Column(db.String(64), default="")
-    # remarks = db.Column(db.String(512), default="")
-    # status = db.Column(db.Boolean, default=False)
-
+    first = db.Column(db.String(128), nullable=False)
+    last = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(64), index=True, unique=True)
+    password_hash = db.Column(db.String(128))
+    created = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=date.today())
+    phone = db.Column(db.Integer)
+    qualified = db.Column(db.Boolean, index=True, unique=False, default=False)
+    data = db.Column(db.BLOB, index=False, unique=False)
+    points = db.Column(db.Integer, index=True, unique=False, default=0)
+    
     def __repr__(self):
-        return str(self.side)
+        return f"{self.first} {self.last}"
 
 
 def get_user():
-    return { 'id':0, 'name':"Allan Elsberry", "points":0,"phone":2059015853, "email":'allan.elsberry@gmail.com',"trained":True}
+    return User.query.get(1)
+
+def create_user(u):
+    db.session.add(u)
+
+def seed_users():
+    u = User(first="Allan",last="Elsberry",email="allan.elsberry@gmail.com",phone=2059015853,qualified=True)
+    create_user(u)
+    return None
 
 def get_calendar(day=date.today()):
     calendar = {}
     days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
-    day= day-timedelta(days=(day.day-1)) #get beginning of month
-    start_date = day-timedelta(days=day.weekday())
+    start_date = day= day-timedelta(days=(day.day-1)) #get beginning of month
     date_list = [start_date+timedelta(days=n) for n in range(monthrange(start_date.year,start_date.month)[1])]
     calendar.update({'date_list':date_list})
     calendar.update({'days_of_week':days_of_week})
     return calendar
     
-
+#seed_users()
 
 
 

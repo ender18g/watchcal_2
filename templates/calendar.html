@@ -2,7 +2,7 @@
 
 {%block content%}
 
-<h3 class="p-4">{{user.name}} - {{user.points}} points</h3>
+<h3 class="p-4">{{user}} - {{user.points}} points</h3>
 
 
 <table class="table table-bordered">
@@ -18,12 +18,12 @@
         {%for day in calendar.date_list%}
         {%if day.weekday==0%}
         <tr class="calendar_block">
-        {%endif%}
-            <td>{{day.day}}
+            {%endif%}
+            <td >{{day.strftime("%d %b")}}
 
             </td>
 
-        {%if day.weekday()==6%}
+            {%if day.weekday()==6%}
         </tr>
         {%endif%}
         {%endfor%}
@@ -32,6 +32,14 @@
 
 </table>
 
+<script>
 
+    $("td").hover(function () {
+
+        $(this).toggleClass("table-secondary");
+
+    });
+
+</script>
 
 {%endblock%}
