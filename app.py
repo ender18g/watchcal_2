@@ -107,16 +107,15 @@ def unpickle_calendar():
         full_calendar = pickle.load(fp)
         return full_calendar
 def update_user_bid_dict(u_id,user_bid_dict):
-    with open(f"{u_id}.json","w") as f:
-        json.dump(user_bid_dict,f)
+    json_text = json.dumps(user_bid_dict)
+    User.query.get(u_id).data = json_text
     print(f"saving {u_id}******{user_bid_dict}")
     return None
+
 def get_user_bid_dict(u_id): 
-    try:
-        with open(f"{u_id}.json","r") as f:
-            user_bid_dict = json.load(f)
-        user_bid_dict={int(k):int(v) for k,v in user_bid_dict.items()}
-    except: return {}
+    try: user_bid_dict = json.loads(User.query.get(u_id).data)
+    except: user_bid_dict = {}
+    user_bid_dict={int(k):int(v) for k,v in user_bid_dict.items()}
     return user_bid_dict
 
 # db.drop_all()
@@ -174,3 +173,8 @@ def save():
 @app.route('/assign', methods=["POST"])
 def assign():
     pickle_calendar(full_calendar)
+    return None
+
+@app.route('/points', methods=["GET"])
+def points():
+    return render_template('points.html',users=User.query.all())

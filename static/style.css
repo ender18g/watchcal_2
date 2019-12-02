@@ -1,8 +1,8 @@
-tbody tr {
+calTable > tbody tr {
 
     height:15vh;
 }
 
-td{
+calTable > td{
     width: 14vw;
 }
