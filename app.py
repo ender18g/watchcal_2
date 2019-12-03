@@ -170,10 +170,10 @@ def save():
     return redirect(request.referrer)
 
 
-@app.route('/assign', methods=["POST"])
+@app.route('/assign', methods=["GET","POST"])
 def assign():
-    pickle_calendar(full_calendar)
-    return None
+    users=User.query.all()
+    return render_template('assign.html',calendar=calendar,users=users,bids={u.id:get_user_bid_dict(u.id) for u in users})
 
 @app.route('/points', methods=["GET"])
 def points():
