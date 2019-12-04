@@ -5,7 +5,7 @@
 <h3 class="m-2 text-center">{{user}}</h3>
 <h5 class="m-2 text-center">{{user.points}} Points</h5>
 
-<table class="table table-bordered calTable">
+<table class="table table-bordered table-striped calTable">
 
     <thead class="table-secondary">
         {%for day in days_of_week%}
@@ -64,7 +64,7 @@
 
 
     function colorCells() {
-        $(this).removeClass();
+        $(this).removeClass('bg-danger bg-success');
         if ($(this).children().children("input").val() == 0) {
             $(this).addClass("bg-danger");
         }
@@ -102,6 +102,10 @@
         if (e.which == 13) {
             $("#submit").click();
         }
+    });
+
+    $('td').hover(function(){
+        $(this).toggleClass('shadow mb-5 rounded')
     });
 
 </script>

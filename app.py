@@ -77,7 +77,7 @@ days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
 
 
 def get_user():
-    return User.query.get(1)
+    return User.query.get(2)
 
 def create_user(u):
     global db
@@ -85,7 +85,7 @@ def create_user(u):
     db.session.commit()
 
 def seed_users():
-    u = User(first="Allan",last="Elsberry",email="allan.elsberry@gmail.com",phone=2059015853,qualified=True)
+    u = User(first="Blake",last="smith",email="blake@gmail.com",phone=7899015853,qualified=True)
     create_user(u)
     return None
 def get_date_index(my_date):
