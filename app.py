@@ -9,7 +9,10 @@ from flask_migrate import Migrate
 import holidays
 import json
 import pickle
-
+from flask_login import LoginManager, login_user,current_user,login_required, UserMixin
+from flask_openid import OpenID
+from forms import LoginForm, RegistrationForm
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 
@@ -27,19 +30,31 @@ db = SQLAlchemy(app)
 migrate = Migrate(app,db)
 us_holidays = holidays.US()
 
-class User(db.Model):
+lm = LoginManager()
+lm.init_app(app)
+oid = OpenID(app,os.path.join(basedir, 'tmp'))
+
+
+
+class User(UserMixin,db.Model):
     __tablename__='Users'
     id = db.Column(db.Integer, primary_key=True)
-    first = db.Column(db.String(128), nullable=False)
-    last = db.Column(db.String(128), nullable=False)
+    first = db.Column(db.String(128))
+    last = db.Column(db.String(128))
     email = db.Column(db.String(64), index=True, unique=True)
     password_hash = db.Column(db.String(128))
-    created = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=date.today())
+    created = db.Column(db.DateTime, index=False, unique=False, default=date.today())
     phone = db.Column(db.Integer)
     qualified = db.Column(db.Boolean, index=True, unique=False, default=False)
     data = db.Column(db.String(32768), index=False, unique=False)
     points = db.Column(db.Integer, index=True, unique=False, default=0)
     
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
     def __repr__(self):
         return f"{self.first} {self.last}"
 
@@ -76,13 +91,9 @@ start_date = date(2019,1,1)
 days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
 
 
-def get_user():
-    return User.query.get(2)
-
-def create_user(u):
-    global db
-    db.session.add(u)
-    db.session.commit()
+@lm.user_loader
+def load_user():
+    return User.query.get(int(id))
 
 def seed_users():
     u = User(first="Blake",last="smith",email="blake@gmail.com",phone=7899015853,qualified=True)
@@ -112,7 +123,7 @@ def update_user_bid_dict(u_id,user_bid_dict):
     print(f"saving {u_id}******{user_bid_dict}")
     return None
 
-def get_user_bid_dict(u_id): 
+def load_user_bid_dict(u_id): 
     try: user_bid_dict = json.loads(User.query.get(u_id).data)
     except: user_bid_dict = {}
     user_bid_dict={int(k):int(v) for k,v in user_bid_dict.items()}
@@ -129,18 +140,39 @@ except:
 ########################  Routes ########################
 
 @app.route('/', methods=['GET','POST'])
-def welcome():
-    current_user = get_user()
-    if request.method =="POST":
-        current_user.first=request.form['name']
-        print(request.form['name'])
+def index():
+    current_user = load_user()
+    return render_template('welcome.html', user=load_user())
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(email=form.email.data, first = form.first.data, last=form.last.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
         db.session.commit()
-    return render_template('welcome.html', user=get_user())
+        flash('Congratulations, you are now a registered user!')
+        return redirect(url_for('login'))
+    return render_template('register.html', title='Register', form=form)
 
 
-@app.route('/login', methods=['GET','POST'])
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html', user=get_user())
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+        login_user(user, remember=form.remember_me.data)
+        return redirect(url_for('index'))
+    return render_template('login.html', title='Sign In', form=form)
 
 @app.route('/calendar/',defaults={'year':date.today().year, 'month':date.today().month})
 @app.route('/calendar/<int:year>/<int:month>')
@@ -152,15 +184,15 @@ def calendar(year,month):
         month=12
         year-=1
     calendar,start_info = get_month_calendar(date(year,month,1))
-    current_user = get_user()
-    user_bid_dict = get_user_bid_dict(current_user.id)
-    return render_template('calendar.html', user=get_user(), user_bid_dict = user_bid_dict, 
+    current_user = load_user()
+    user_bid_dict = load_user_bid_dict(current_user.id)
+    return render_template('calendar.html', user=load_user(), user_bid_dict = user_bid_dict, 
         calendar = calendar,start_info=start_info,days_of_week=days_of_week)
 
 @app.route('/save', methods=["POST"])
 def save():
-    current_user = get_user()
-    user_bid_dict = get_user_bid_dict(current_user.id)
+    current_user = load_user()
+    user_bid_dict = load_user_bid_dict(current_user.id)
     data = request.form.to_dict()
     for k,v in data.items():
         if v == '':
@@ -173,7 +205,7 @@ def save():
 @app.route('/assign', methods=["GET","POST"])
 def assign():
     users=User.query.all()
-    return render_template('assign.html',calendar=calendar,users=users,bids={u.id:get_user_bid_dict(u.id) for u in users})
+    return render_template('assign.html',calendar=calendar,users=users,bids={u.id:load_user_bid_dict(u.id) for u in users})
 
 @app.route('/points', methods=["GET"])
 def points():
