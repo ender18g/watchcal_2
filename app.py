@@ -122,10 +122,6 @@ days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
 def load_user(id=1):
     return User.query.get(int(id))
 
-def seed_users():
-    u = User(first="Blake",last="smith",email="blake@gmail.com",phone=7899015853,qualified=True)
-    create_user(u)
-    return None
 def get_date_index(my_date):
     result = my_date-start_date
     return result.days
