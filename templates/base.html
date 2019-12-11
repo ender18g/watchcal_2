@@ -39,14 +39,33 @@
                 <li class="nav-item {%if request.path == '/assign'%}active{%endif%}"">
                     <a class=" nav-link" href="/assign">Assign</a>
                 </li>
+                {%if current_user.is_anonymous%}
+                <li class="nav-item {%if request.path == '/logout'%}active{%endif%}"">
+                    <a class=" nav-link" href="/login">Login</a>
+                </li>
+                {%else%}
                 <li class="nav-item {%if request.path == '/logout'%}active{%endif%}"">
                     <a class=" nav-link" href="/logout">Logout</a>
                 </li>
+
+                {%endif%}
+
             </ul>
         </div>
     </nav>
 
-    <div class="container-fluid">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+
+    <ul class='my-4 text-danger'>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <div class="mt-2 container-fluid">
         {% block content %}
         {% endblock %}
     </div>

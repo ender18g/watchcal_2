@@ -9,18 +9,18 @@ from flask_migrate import Migrate
 import holidays
 import json
 import pickle
-from flask_login import LoginManager, login_user,current_user,login_required, UserMixin
+from flask_login import LoginManager, logout_user, login_user, current_user, login_required, UserMixin
 from flask_openid import OpenID
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, ValidationError, Email,EqualTo
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 
-################ CONFIG
+# CONFIG
 app = Flask(__name__)
 app.config.from_object(Config)
 
-##Setup the Database:
+# Setup the Database:
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = \
     'sqlite:///' + os.path.join(basedir, 'data.sqlite')
@@ -28,24 +28,24 @@ app.config['SQLALCHEMY_DATABASE_URI'] = \
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-migrate = Migrate(app,db)
+migrate = Migrate(app, db)
 us_holidays = holidays.US()
 
 lm = LoginManager()
 lm.init_app(app)
-oid = OpenID(app,os.path.join(basedir, 'tmp'))
-################ CONFIG
+login = LoginManager(app)
+login.login_view = 'login'
+oid = OpenID(app, os.path.join(basedir, 'tmp'))
+# CONFIG
 
 
-
-
-
-################ MODELS
+# MODELS
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
+
 
 class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -62,20 +62,21 @@ class RegistrationForm(FlaskForm):
             raise ValidationError('Please use a different email address.')
 
 
-class User(UserMixin,db.Model):
-    __tablename__='Users'
+class User(UserMixin, db.Model):
+    __tablename__ = 'Users'
     id = db.Column(db.Integer, primary_key=True)
     active = db.Column(db.Boolean, default=True)
     first = db.Column(db.String(128))
     last = db.Column(db.String(128))
     email = db.Column(db.String(64), index=True, unique=True)
     password_hash = db.Column(db.String(128))
-    created = db.Column(db.DateTime, index=False, unique=False, default=date.today())
+    created = db.Column(db.DateTime, index=False,
+                        unique=False, default=date.today())
     phone = db.Column(db.Integer)
     qualified = db.Column(db.Boolean, index=True, unique=False, default=False)
     data = db.Column(db.String(32768), index=False, unique=False)
     points = db.Column(db.Integer, index=True, unique=False, default=0)
-    
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -85,94 +86,110 @@ class User(UserMixin,db.Model):
     def __repr__(self):
         return f"{self.first} {self.last}"
 
+
 class Day():
-    def __init__(self,id,date):
-        self.id=id
-        self.date=date
+    def __init__(self, id, date):
+        self.id = id
+        self.date = date
         self.set_value()
-        self.assigned={}
+        self.assigned = {}
         self.bid = {}
-    def get_value(self,value=None):
-        if self.date.weekday()>4:
+
+    def get_value(self, value=None):
+        if self.date.weekday() > 4:
             return 3
         if self.date in us_holidays:
             return 3
         return 2
-    def set_value(self,value=None):
+
+    def set_value(self, value=None):
         if value:
-            self.value=value 
+            self.value = value
         else:
-            self.value=self.get_value()
-    def insert_bid(self,user_id,bid=1):
-        self.bid.update({user_id:bid})
+            self.value = self.get_value()
+
+    def insert_bid(self, user_id, bid=1):
+        self.bid.update({user_id: bid})
         return None
-    def assign_day(self,user_id,last):
-        self.assigned={"user_id": user_id, "last": last}
+
+    def assign_day(self, user_id, last):
+        self.assigned = {"user_id": user_id, "last": last}
         return None
+
     def __repr__(self):
         return f"{self.date.strftime('%d %b %y')}"
-################ MODELS
+# MODELS
 
 
-
-################ FUNCTIONS
-start_date = date(2019,1,1)
+# FUNCTIONS
+start_date = date(2019, 1, 1)
 days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
 @lm.user_loader
 def load_user(id=1):
     return User.query.get(int(id))
 
+
 def get_date_index(my_date):
     result = my_date-start_date
     return result.days
+
+
 def get_month_calendar(my_date=date.today()):
     first_dom = my_date-timedelta(days=my_date.day-1)
-    last_dom = first_dom+timedelta(days=monthrange(first_dom.year,first_dom.month)[1])
+    last_dom = first_dom + \
+        timedelta(days=monthrange(first_dom.year, first_dom.month)[1])
     start_index = get_date_index(first_dom-timedelta(days=first_dom.weekday()))
     end_index = get_date_index(last_dom)
     month_calendar = full_calendar[start_index:end_index]
-    return [month_calendar,{'first_dom':first_dom,'start_index':get_date_index(first_dom)}]
+    return [month_calendar, {'first_dom': first_dom, 
+    'start_index': get_date_index(first_dom)}]
+
+
 def pickle_calendar(full_calendar):
-    with open('calendar.pickle','wb') as fp:
-        pickle.dump(full_calendar,fp)
+    with open('calendar.pickle', 'wb') as fp:
+        pickle.dump(full_calendar, fp)
     return None
+
+
 def unpickle_calendar():
-    with open('calendar.pickle','rb') as fp:
+    with open('calendar.pickle', 'rb') as fp:
         full_calendar = pickle.load(fp)
         return full_calendar
-def update_user_bid_dict(u_id,user_bid_dict):
+
+
+def update_user_bid_dict(u_id, user_bid_dict):
     json_text = json.dumps(user_bid_dict)
     User.query.get(u_id).data = json_text
     print(f"saving {u_id}******{user_bid_dict}")
     return None
 
-def load_user_bid_dict(u_id): 
-    try: user_bid_dict = json.loads(User.query.get(u_id).data)
-    except: user_bid_dict = {}
-    user_bid_dict={int(k):int(v) for k,v in user_bid_dict.items()}
+
+def load_user_bid_dict(u_id):
+    try:
+        user_bid_dict = json.loads(User.query.get(u_id).data)
+    except:
+        user_bid_dict = {}
+    user_bid_dict = {int(k): int(v) for k, v in user_bid_dict.items()}
     return user_bid_dict
+
 
 # db.drop_all()
 # db.create_all()
 # seed_users()
 try:
     full_calendar = unpickle_calendar()
-except: 
-    full_calendar = [Day(n,start_date + timedelta(days=n)) for n in range(365*15)]
-################ FUNCTIONS
-
-
-
-
-
-
+except:
+    full_calendar = [Day(n, start_date + timedelta(days=n))
+                     for n in range(365*15)]
+# FUNCTIONS
 
 
 ########################  Routes ########################
 
-@app.route('/', methods=['GET','POST'])
+@app.route('/', methods=['GET', 'POST'])
 def index():
     return render_template('welcome.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -180,14 +197,14 @@ def register():
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = User(email=form.email.data, first = form.first.data, last=form.last.data)
+        user = User(email=form.email.data,
+                    first=form.first.data, last=form.last.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
         flash('Congratulations, you are now a registered user!')
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
-
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -204,37 +221,48 @@ def login():
         return redirect(url_for('index'))
     return render_template('login.html', title='Sign In', form=form)
 
-@app.route('/calendar/',defaults={'year':date.today().year, 'month':date.today().month})
+
+@app.route('/calendar/', defaults={'year': date.today().year, 'month': date.today().month})
 @app.route('/calendar/<int:year>/<int:month>')
-def calendar(year,month):
-    if month>12:
-        month=1
-        year+=1
-    elif month<1:
-        month=12
-        year-=1
-    calendar,start_info = get_month_calendar(date(year,month,1))
+@login_required
+def calendar(year, month):
+    if month > 12:
+        month = 1
+        year += 1
+    elif month < 1:
+        month = 12
+        year -= 1
+    calendar, start_info = get_month_calendar(date(year, month, 1))
     user_bid_dict = load_user_bid_dict(current_user.id)
-    return render_template('calendar.html', user_bid_dict = user_bid_dict, 
-        calendar = calendar,start_info=start_info,days_of_week=days_of_week)
+    return render_template('calendar.html', user_bid_dict=user_bid_dict,
+                           calendar=calendar, start_info=start_info, days_of_week=days_of_week)
+
 
 @app.route('/save', methods=["POST"])
 def save():
     user_bid_dict = load_user_bid_dict(current_user.id)
     data = request.form.to_dict()
-    for k,v in data.items():
+    for k, v in data.items():
         if v == '':
-            v=0
-        user_bid_dict.update({int(k):int(v)})
-    update_user_bid_dict(current_user.id,user_bid_dict)
+            v = 0
+        user_bid_dict.update({int(k): int(v)})
+    update_user_bid_dict(current_user.id, user_bid_dict)
     return redirect(request.referrer)
 
 
-@app.route('/assign', methods=["GET","POST"])
+@app.route('/assign', methods=["GET", "POST"])
+@login_required
 def assign():
-    users=User.query.all()
-    return render_template('assign.html',calendar=calendar,users=users,bids={u.id:load_user_bid_dict(u.id) for u in users})
+    users = User.query.all()
+    return render_template('assign.html', calendar=calendar, users=users, bids={u.id: load_user_bid_dict(u.id) for u in users})
+
 
 @app.route('/points', methods=["GET"])
+@login_required
 def points():
-    return render_template('points.html',users=User.query.all())
+    return render_template('points.html', users=User.query.all())
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
