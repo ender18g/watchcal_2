@@ -3,13 +3,9 @@
 {%block content%}
 
 
-<h1>Welcome {{user}}!</h1>
-<h3>you have {{user.points}} points</h3>
+<h1>Welcome {{current_user}}!</h1>
+<h3>you have {{current_user.points}} points</h3>
 
 
-<form action="/" method="POST">
-<input type="text" name="name" id="" value="{{user.name}}">
-<button type="submit" class="btn btn-primary">SUBMIT</button>
-</form>
 
 {%endblock%}

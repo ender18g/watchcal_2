@@ -1,4 +1,4 @@
-from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, abort
+from flask import Flask, flash, render_template, render_template_string, request, redirect, url_for, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from random import randint, choice
 import os
@@ -11,11 +11,12 @@ import json
 import pickle
 from flask_login import LoginManager, login_user,current_user,login_required, UserMixin
 from flask_openid import OpenID
-from forms import LoginForm, RegistrationForm
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import DataRequired, ValidationError, Email,EqualTo
 
-
-
+################ CONFIG
 app = Flask(__name__)
 app.config.from_object(Config)
 
@@ -33,7 +34,32 @@ us_holidays = holidays.US()
 lm = LoginManager()
 lm.init_app(app)
 oid = OpenID(app,os.path.join(basedir, 'tmp'))
+################ CONFIG
 
+
+
+
+
+################ MODELS
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Remember Me')
+    submit = SubmitField('Sign In')
+
+class RegistrationForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    first = StringField('First Name', validators=[DataRequired()])
+    last = StringField('Last Name', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    password2 = PasswordField(
+        'Repeat Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Register')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different email address.')
 
 
 class User(UserMixin,db.Model):
@@ -84,15 +110,15 @@ class Day():
         return None
     def __repr__(self):
         return f"{self.date.strftime('%d %b %y')}"
+################ MODELS
 
 
 
+################ FUNCTIONS
 start_date = date(2019,1,1)
 days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
-
-
 @lm.user_loader
-def load_user():
+def load_user(id=1):
     return User.query.get(int(id))
 
 def seed_users():
@@ -136,13 +162,20 @@ try:
     full_calendar = unpickle_calendar()
 except: 
     full_calendar = [Day(n,start_date + timedelta(days=n)) for n in range(365*15)]
+################ FUNCTIONS
+
+
+
+
+
+
+
 
 ########################  Routes ########################
 
 @app.route('/', methods=['GET','POST'])
 def index():
-    current_user = load_user()
-    return render_template('welcome.html', user=load_user())
+    return render_template('welcome.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -184,14 +217,12 @@ def calendar(year,month):
         month=12
         year-=1
     calendar,start_info = get_month_calendar(date(year,month,1))
-    current_user = load_user()
     user_bid_dict = load_user_bid_dict(current_user.id)
-    return render_template('calendar.html', user=load_user(), user_bid_dict = user_bid_dict, 
+    return render_template('calendar.html', user_bid_dict = user_bid_dict, 
         calendar = calendar,start_info=start_info,days_of_week=days_of_week)
 
 @app.route('/save', methods=["POST"])
 def save():
-    current_user = load_user()
     user_bid_dict = load_user_bid_dict(current_user.id)
     data = request.form.to_dict()
     for k,v in data.items():
