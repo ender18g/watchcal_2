@@ -2,9 +2,13 @@
 
 {%block content%}
 
-
+{%if current_user.is_authenticated%}
 <h1>Welcome {{current_user}}!</h1>
 <h3>you have {{current_user.points}} points</h3>
+{%else%}
+<h1> Welcome to the E&W Duty Portal</h1>
+<a href="{{url_for('register')}}"><h3>Click here to register a new account</h3></a>
+{%endif%}
 
 
 

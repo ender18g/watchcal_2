@@ -14,7 +14,7 @@ from flask_openid import OpenID
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
+from wtforms.validators import DataRequired, NumberRange, ValidationError, Email, EqualTo
 
 # CONFIG
 app = Flask(__name__)
@@ -39,12 +39,20 @@ oid = OpenID(app, os.path.join(basedir, 'tmp'))
 # CONFIG
 
 
-# MODELS
+# FORMS
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
+
+
+class ProfileForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    first = StringField('First Name', validators=[DataRequired()])
+    last = StringField('Last Name', validators=[DataRequired()])
+    phone = StringField('Phone Number')
+    submit = SubmitField('Update')
 
 
 class RegistrationForm(FlaskForm):
@@ -60,6 +68,8 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user is not None:
             raise ValidationError('Please use a different email address.')
+
+# MODELS
 
 
 class User(UserMixin, db.Model):
@@ -124,7 +134,7 @@ class Day():
 # FUNCTIONS
 start_date = date(2019, 1, 1)
 days_of_week = "Mon, Tue, Wed, Thu, Fri, Sat, Sun".split(',')
-@lm.user_loader
+@login.user_loader
 def load_user(id=1):
     return User.query.get(int(id))
 
@@ -141,8 +151,8 @@ def get_month_calendar(my_date=date.today()):
     start_index = get_date_index(first_dom-timedelta(days=first_dom.weekday()))
     end_index = get_date_index(last_dom)
     month_calendar = full_calendar[start_index:end_index]
-    return [month_calendar, {'first_dom': first_dom, 
-    'start_index': get_date_index(first_dom)}]
+    return [month_calendar, {'first_dom': first_dom,
+                             'start_index': get_date_index(first_dom)}]
 
 
 def pickle_calendar(full_calendar):
@@ -189,6 +199,26 @@ except:
 @app.route('/', methods=['GET', 'POST'])
 def index():
     return render_template('welcome.html')
+
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+
+    form = ProfileForm()
+
+    if form.validate_on_submit():
+        current_user.first = form.first.data
+        current_user.last = form.last.data
+        current_user.email = form.email.data
+        current_user.phone = form.phone.data
+
+    form.email.data = current_user.email
+    form.phone.data = current_user.phone
+    form.first.data = current_user.first
+    form.last.data = current_user.last
+
+    return render_template('profile.html', form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -261,6 +291,7 @@ def assign():
 @login_required
 def points():
     return render_template('points.html', users=User.query.all())
+
 
 @app.route('/logout')
 def logout():
