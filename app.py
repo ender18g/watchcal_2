@@ -284,6 +284,7 @@ def save():
 @login_required
 def assign():
     users = User.query.all()
+    calendar, start_info = get_month_calendar(date.today()+timedelta(days=30))
     return render_template('assign.html', calendar=calendar, users=users, bids={u.id: load_user_bid_dict(u.id) for u in users})
 
 
