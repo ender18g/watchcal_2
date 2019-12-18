@@ -148,7 +148,8 @@ def get_month_calendar(my_date=date.today()):
     first_dom = my_date-timedelta(days=my_date.day-1)
     last_dom = first_dom + \
         timedelta(days=monthrange(first_dom.year, first_dom.month)[1])
-    start_index = get_date_index(first_dom-timedelta(days=first_dom.weekday()))
+    #start_index = get_date_index(first_dom-timedelta(days=first_dom.weekday()))
+    start_index = get_date_index(first_dom)
     end_index = get_date_index(last_dom)
     month_calendar = full_calendar[start_index:end_index]
     return [month_calendar, {'first_dom': first_dom,

@@ -21,11 +21,13 @@
         <td>{{u}}</td>
         <td>{{u.points}}</td>
         {%for day in calendar%}
+        <td class="rounded border">
             {%if bids[u.id][day.id]>=0%}
-            <td><input class="d-none"type="text" value="{{bids[u.id][day.id]}}"></input></td>
+            <input class="d-none"type="text" value="{{bids[u.id][day.id]}}"></input>
             {%else%}
-            <td>None</td>
+            None
             {%endif%}
+        </td>
         {%endfor%}
 
     </tr>
@@ -54,7 +56,9 @@ function colorCells() {
         // $('.d-none').removeClass("d-none")
     });
 
-
+    $('td').hover(function(){
+        $(this).toggleClass('shadow mb-5 rounded')
+    });
 
 </script>
 

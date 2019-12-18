@@ -14,7 +14,11 @@
     </thead>
     <form id="mainForm" action="/save" method="POST">
         <tbody>
+            {%for n in range(calendar[0].date.weekday())%}
+            <td class = "calendar_block"></td>
+            {%endfor%}
             {%for day in calendar%}
+            <!-- if the day is a monday, start a new row -->
             {%if day.date.weekday==0%}
             <tr class="calendar_block">
                 {%endif%}
