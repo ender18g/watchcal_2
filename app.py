@@ -86,6 +86,7 @@ class User(UserMixin, db.Model):
     qualified = db.Column(db.Boolean, index=True, unique=False, default=False)
     data = db.Column(db.String(32768), index=False, unique=False)
     points = db.Column(db.Integer, index=True, unique=False, default=0)
+    department = db.Column(db.String(128))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -151,9 +152,9 @@ def get_month_calendar(my_date=date.today()):
     #start_index = get_date_index(first_dom-timedelta(days=first_dom.weekday()))
     start_index = get_date_index(first_dom)
     end_index = get_date_index(last_dom)
+    full_calendar=unpickle_calendar()
     month_calendar = full_calendar[start_index:end_index]
-    return [month_calendar, {'first_dom': first_dom,
-                             'start_index': get_date_index(first_dom)}]
+    return month_calendar
 
 
 def pickle_calendar(full_calendar):
@@ -183,15 +184,34 @@ def load_user_bid_dict(u_id):
     user_bid_dict = {int(k): int(v) for k, v in user_bid_dict.items()}
     return user_bid_dict
 
+def assign_month_duty(my_date):
+    month_calendar = get_month_calendar(my_date)
+    users = User.query.all()
+
+    for day in month_calendar:
+        high_point = [-1,None]
+        for u in users:
+            for day_id,bid_value in load_user_bid_dict(u.id).items():
+                if day_id==day.id:
+                    if bid_value>high_point[0]:
+                        high_point=[bid_value,u.id]
+        day.assigned['DO']=high_point[1]
+    return month_calendar
+
+
+
+
+
 
 # db.drop_all()
 # db.create_all()
 # seed_users()
-try:
+try: 
     full_calendar = unpickle_calendar()
 except:
     full_calendar = [Day(n, start_date + timedelta(days=n))
                      for n in range(365*15)]
+pickle_calendar(full_calendar)
 # FUNCTIONS
 
 
@@ -263,10 +283,10 @@ def calendar(year, month):
     elif month < 1:
         month = 12
         year -= 1
-    calendar, start_info = get_month_calendar(date(year, month, 1))
+    calendar= get_month_calendar(date(year, month, 1))
     user_bid_dict = load_user_bid_dict(current_user.id)
     return render_template('calendar.html', user_bid_dict=user_bid_dict,
-                           calendar=calendar, start_info=start_info, days_of_week=days_of_week)
+                           calendar=calendar, days_of_week=days_of_week)
 
 
 @app.route('/save', methods=["POST"])
@@ -285,8 +305,8 @@ def save():
 @login_required
 def assign():
     users = User.query.all()
-    calendar, start_info = get_month_calendar(date.today()+timedelta(days=30))
-    return render_template('assign.html', calendar=calendar, users=users, bids={u.id: load_user_bid_dict(u.id) for u in users})
+    #calendar, start_info = get_month_calendar(date.today()+timedelta(days=30))
+    return render_template('assign.html', calendar=assign_month_duty(date.today()+timedelta(days=30)), users=users, bids={u.id: load_user_bid_dict(u.id) for u in users})
 
 
 @app.route('/points', methods=["GET"])

@@ -14,12 +14,13 @@
     </thead>
     <form id="mainForm" action="/save" method="POST">
         <tbody>
+            <!-- Put blank cells up until the first day -->
             {%for n in range(calendar[0].date.weekday())%}
             <td class = "calendar_block"></td>
             {%endfor%}
             {%for day in calendar%}
             <!-- if the day is a monday, start a new row -->
-            {%if day.date.weekday==0%}
+            {%if day.date.weekday()==0%}
             <tr class="calendar_block">
                 {%endif%}
                 <td id={{day.id}}>
@@ -48,14 +49,16 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="text-center col-3">
-                    <button class="m-3 btn btn-primary" id="submit" type="submit">Save Preferences</button>
+                    <button class="m-3 btn btn-success" id="submit" type="submit">Save Preferences</button>
 
                 </div>
-                <div class="d-block col-6">
-                        <h1 class="text-center"><a href="/calendar/{{start_info.first_dom.year}}/{{start_info.first_dom.month-1}}">&lt</a>
-                        {{start_info.first_dom.strftime("%B %Y")}}
-                        <a href="/calendar/{{start_info.first_dom.year}}/{{start_info.first_dom.month+1}}">&gt</a></h1>
+                <div class="col-1"><h1><a href="/calendar/{{calendar[0].date.year}}/{{calendar[0].date.month-1}}">&lt</a></h1></div>
+                <div class="d-block col-4">
+                        <h1 class="text-center">
+                        {{calendar[0].date.strftime("%B %Y")}}
+                        </h1>
                 </div>
+                <div class="col-1"><h1><a href="/calendar/{{calendar[0].date.year}}/{{calendar[0].date.month+1}}">&gt</a></h1></div>
                 <div class="text-center col-3">
                     <button class="m-3 btn btn-warning" id="reset">Reset Calendar</button>
                 </div>

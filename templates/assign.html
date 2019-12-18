@@ -2,15 +2,19 @@
 
 {%block content%}
 
-<div class="container-fluid">
+<div class="w-100 container-fluid">
 
 <table class="table table-striped table-hover">
     <thead>
         <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Points</th>
+            <th style="width: 2.5%;"class="mx-0 px-0"scope="col">Name</th>
+            <th style="width: 2.5%;"class="mx-0 px-0"scope="col">Points</th>
             {%for day in calendar%}
-            <th scope="col">{{day}}</th>
+            <th style="width: 2.5%;" class="text-center mx-0 px-0"scope="col">
+                <p class="d-none d-xl-table-cell">{{day.date.strftime("%a")}}</p>
+                <br class="d-none d-xl-block">
+                <p class="d-none d-lg-table-cell">{{day.date.strftime("%d")}}</p>
+            </th>
             {%endfor%}
         </tr>
     </thead>
@@ -18,10 +22,13 @@
 <tbody>
     {%for u in users%}
     <tr>
-        <td>{{u}}</td>
-        <td>{{u.points}}</td>
+        <td class="mx-0 px-0">{{u.last}}</td>
+        <td class="text-center mx-0 px-0">{{u.points}}</td>
         {%for day in calendar%}
-        <td class="rounded border">
+        <td class="mx-0 px-0 rounded">
+            {%if day.assigned['DO']==u.id%}
+            <p class="text-center">.</p>
+            {%endif%}
             {%if bids[u.id][day.id]>=0%}
             <input class="d-none"type="text" value="{{bids[u.id][day.id]}}"></input>
             {%else%}
@@ -56,9 +63,9 @@ function colorCells() {
         // $('.d-none').removeClass("d-none")
     });
 
-    $('td').hover(function(){
-        $(this).toggleClass('shadow mb-5 rounded')
-    });
+    // $('td').hover(function(){
+    //     $(this).toggleClass('shadow mb-5')
+    // });
 
 </script>
 
