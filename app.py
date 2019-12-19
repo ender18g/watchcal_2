@@ -184,19 +184,15 @@ def load_user_bid_dict(u_id):
     user_bid_dict = {int(k): int(v) for k, v in user_bid_dict.items()}
     return user_bid_dict
 
-def assign_month_duty(my_date):
-    month_calendar = get_month_calendar(my_date)
-    users = User.query.all()
+def save_month(month_calendar):
+    full_calendar=unpickle_calendar()
+    start_index = month_calendar[0].id
+    end_index = month_calendar[-1].id
+    full_calendar[start_index:end_index+1]=month_calendar
+    pickle_calendar(full_calendar)
+    return None
 
-    for day in month_calendar:
-        high_point = [-1,None]
-        for u in users:
-            for day_id,bid_value in load_user_bid_dict(u.id).items():
-                if day_id==day.id:
-                    if bid_value>high_point[0]:
-                        high_point=[bid_value,u.id]
-        day.assigned['DO']=high_point[1]
-    return month_calendar
+
 
 
 
@@ -301,13 +297,39 @@ def save():
     return redirect(request.referrer)
 
 
-@app.route('/assign', methods=["GET", "POST"])
+@app.route('/assign', defaults={'year': date.today().year, 'month': date.today().month})
+@app.route('/assign/<int:year>/<int:month>')
 @login_required
-def assign():
+def assign(year,month):
     users = User.query.all()
-    #calendar, start_info = get_month_calendar(date.today()+timedelta(days=30))
-    return render_template('assign.html', calendar=assign_month_duty(date.today()+timedelta(days=30)), users=users, bids={u.id: load_user_bid_dict(u.id) for u in users})
+    if month > 12:
+        month = 1
+        year += 1
+    elif month < 1:
+        month = 12
+        year -= 1
+    calendar= get_month_calendar(date(year, month, 1))
+    return render_template('assign.html', calendar=calendar, users=users, bids={u.id: load_user_bid_dict(u.id) for u in users})
 
+@app.route('/assign_gen/<int:clear>/<int:year>/<int:month>', methods=['POST'])
+@login_required
+def assign_month_duty(clear,year,month):
+    month_calendar = get_month_calendar(date(int(year),int(month),1))
+    users = User.query.all()
+    if clear==1:
+        for day in month_calendar:
+            day.assigned={}
+    else:
+        for day in month_calendar:
+            high_point = [-1,None]
+            for u in users:
+                for day_id,bid_value in load_user_bid_dict(u.id).items():
+                    if day_id==day.id:
+                        if bid_value>high_point[0]:
+                            high_point=[bid_value,u.id]
+            day.assigned['DO']=high_point[1]
+    save_month(month_calendar)
+    return redirect(request.referrer)
 
 @app.route('/points', methods=["GET"])
 @login_required
