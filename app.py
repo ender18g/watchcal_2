@@ -94,6 +94,14 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def update_points(self):
+        full_calendar = unpickle_calendar()
+        total_points=0
+        for day in full_calendar:
+            if day.assigned.get('DO')==self.id:
+                total_points += day.value
+        self.points=total_points
+
     def __repr__(self):
         return f"{self.first} {self.last}"
 
@@ -326,7 +334,7 @@ def assign_month_duty(clear,year,month):
                 for day_id,bid_value in load_user_bid_dict(u.id).items():
                     if day_id==day.id:
                         if bid_value>high_point[0]:
-                            high_point=[bid_value,u.id]
+                            high_point=[bid_value,u.id] 
             day.assigned['DO']=high_point[1]
     save_month(month_calendar)
     return redirect(request.referrer)

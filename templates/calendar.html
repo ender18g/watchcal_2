@@ -16,14 +16,14 @@
         <tbody>
             <!-- Put blank cells up until the first day -->
             {%for n in range(calendar[0].date.weekday())%}
-            <td class = "calendar_block"></td>
+            <td class = "rounded calendar_block"></td>
             {%endfor%}
             {%for day in calendar%}
             <!-- if the day is a monday, start a new row -->
             {%if day.date.weekday()==0%}
             <tr class="calendar_block">
                 {%endif%}
-                <td id={{day.id}}>
+                <td class= "rounded" id={{day.id}}>
                     <h5 class="text-center">{{day.date.strftime("%d %b")}}</h3>
                         <p class="d-none">ID: {{day.id}}</p>
                         {%if day.assigned %}
@@ -112,7 +112,7 @@
     });
 
     $('td').hover(function(){
-        $(this).toggleClass('shadow mb-5 rounded')
+        $(this).toggleClass('shadow mb-5')
     });
 
 </script>
