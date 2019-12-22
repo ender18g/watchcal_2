@@ -26,8 +26,8 @@
                 <td class= "rounded" id={{day.id}}>
                     <h5 class="text-center">{{day.date.strftime("%d %b")}}</h3>
                         <p class="d-none">ID: {{day.id}}</p>
-                        {%if day.assigned %}
-                        <h5>{{ day.assigned['last'] }}</h5>
+                        {%if day.assigned['DO']==current_user.id  %}
+                        <h5 class="m-0 p-0 rounded bg-warning text-center">Duty</h5>
                         {%endif%}
                         <p class="text-center">Points: {{day.value}}</p>
                         <div class="form-group row d-none">

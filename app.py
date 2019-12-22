@@ -215,6 +215,7 @@ def seed_users(num):
         user.set_password("squirrel")
         db.session.add(user)
         db.session.commit()
+        seed_calendars()
     return None
 
 def seed_calendars():
@@ -233,7 +234,7 @@ def seed_calendars():
 #seed_calendars()
 # db.drop_all()
 # db.create_all()
-#seed_users(20)
+#seed_users(10)
 try: 
     full_calendar = unpickle_calendar()
 except:
@@ -373,8 +374,22 @@ def assign_month_duty(clear,year,month):
 @login_required
 def points():
     users = User.query.all()
+    average =0
+    for u in users:
+        average+=u.points
+    average = average/len(users)
     users.sort(reverse=True,key=lambda x: x.points)
-    return render_template('points.html', users=users)
+    return render_template('points.html', users=users,average=average)
+
+@app.route('/change', methods=["POST"])
+@login_required
+def change():
+    full_calendar=unpickle_calendar()
+    day = full_calendar[int(request.form.get('day_id'))]
+    day.assigned['DO']=int(request.form.get('user_id'))
+    save_month([day])
+    update_all_points()
+    return redirect(request.referrer)
 
 
 @app.route('/logout')
