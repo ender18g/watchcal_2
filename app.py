@@ -372,7 +372,9 @@ def assign_month_duty(clear,year,month):
 @app.route('/points', methods=["GET"])
 @login_required
 def points():
-    return render_template('points.html', users=User.query.all())
+    users = User.query.all()
+    users.sort(reverse=True,key=lambda x: x.points)
+    return render_template('points.html', users=users)
 
 
 @app.route('/logout')
