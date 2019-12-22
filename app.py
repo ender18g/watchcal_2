@@ -15,6 +15,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, ValidationError, Email, EqualTo
+import names #for seeding users
 
 # CONFIG
 app = Flask(__name__)
@@ -94,8 +95,7 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def update_points(self):
-        full_calendar = unpickle_calendar()
+    def update_points(self,full_calendar):
         total_points=0
         for day in full_calendar:
             if day.assigned.get('DO')==self.id:
@@ -200,16 +200,40 @@ def save_month(month_calendar):
     pickle_calendar(full_calendar)
     return None
 
+def update_all_points():
+    full_calendar = unpickle_calendar()
+    users = User.query.all()
+    for u in users:
+        u.update_points(full_calendar)
+    return None
+
+def seed_users(num):
+    for n in range(num):
+        first=names.get_first_name()
+        user = User(email=first+"gmail.com",
+                    first=first, last=names.get_last_name())
+        user.set_password("squirrel")
+        db.session.add(user)
+        db.session.commit()
+    return None
+
+def seed_calendars():
+    full_calendar=unpickle_calendar()
+    users = User.query.all()
+    for u in users:
+        user_bid_dict={}
+        for day in full_calendar:
+            user_bid_dict.update({day.id:randint(0,2)})
+        update_user_bid_dict(u.id,user_bid_dict)
+    print("SEEDED calendars^^^^^^^^^^^^^")
 
 
 
 
-
-
-
+#seed_calendars()
 # db.drop_all()
 # db.create_all()
-# seed_users()
+#seed_users(20)
 try: 
     full_calendar = unpickle_calendar()
 except:
@@ -242,6 +266,8 @@ def profile():
     form.phone.data = current_user.phone
     form.first.data = current_user.first
     form.last.data = current_user.last
+
+    print(load_user_bid_dict(current_user.id))
 
     return render_template('profile.html', form=form)
 
@@ -328,15 +354,19 @@ def assign_month_duty(clear,year,month):
         for day in month_calendar:
             day.assigned={}
     else:
+        temp_points = {}
         for day in month_calendar:
             high_point = [-1,None]
+            users.sort(key=lambda x: (x.points + temp_points.get(x.id,0))) # we must re sort for each day
             for u in users:
                 for day_id,bid_value in load_user_bid_dict(u.id).items():
                     if day_id==day.id:
                         if bid_value>high_point[0]:
                             high_point=[bid_value,u.id] 
             day.assigned['DO']=high_point[1]
+            temp_points.update({high_point[1]:temp_points.get(high_point[1],0)+1})
     save_month(month_calendar)
+    update_all_points()
     return redirect(request.referrer)
 
 @app.route('/points', methods=["GET"])
