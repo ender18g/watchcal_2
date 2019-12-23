@@ -53,7 +53,11 @@
                 <td class="text-center mx-0 px-0">{{u.points}}</td>
                 {%for day in calendar%}
                     <td class="assign_cell mx-0 px-0 rounded">
-
+                        <form action="/change" method="post">
+                            <input class="d-none" name="day_id" type="text" value="{{day.id}}"></input>
+                            <input class="d-none" name="user_id" type="text" value="{{u.id}}"></input>
+                            <button class='d-none' type="submit"></button>
+                            </form>
 
                         {%if day.assigned['DO']==u.id%}
                         <h5 class="m-0 p-0 text-center">*</h5>
@@ -63,11 +67,7 @@
                         {%if bids[u.id][day.id]>=0%}
                         <!-- if the user has made a bid put it in here, otherwise dont put an input -->
                         <input class="d-none" type="text" value="{{bids[u.id][day.id]}}"></input>
-                        <form action="/change" method="post">
-                        <input class="d-none" name="day_id" type="text" value="{{day.id}}"></input>
-                        <input class="d-none" name="user_id" type="text" value="{{u.id}}"></input>
-                        <button class='d-none' type="submit"></button>
-                        </form>
+ 
 
                         {%endif%}
                         {%else%}

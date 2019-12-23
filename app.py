@@ -16,6 +16,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, ValidationError, Email, EqualTo
 import names #for seeding users
+from statistics import mean
 
 # CONFIG
 app = Flask(__name__)
@@ -337,6 +338,7 @@ def save():
 @login_required
 def assign(year,month):
     users = User.query.all()
+    users.sort(key=lambda x: x.points)
     if month > 12:
         month = 1
         year += 1
@@ -351,21 +353,32 @@ def assign(year,month):
 def assign_month_duty(clear,year,month):
     month_calendar = get_month_calendar(date(int(year),int(month),1))
     users = User.query.all()
+
     if clear==1:
         for day in month_calendar:
             day.assigned={}
     else:
-        temp_points = {}
+        bids={u.id: load_user_bid_dict(u.id) for u in users}
+        day_need_list ={}
         for day in month_calendar:
-            high_point = [-1,None]
-            users.sort(key=lambda x: (x.points + temp_points.get(x.id,0))) # we must re sort for each day
+            score = 0
             for u in users:
-                for day_id,bid_value in load_user_bid_dict(u.id).items():
+                    score+=bids[u.id].get(day.id,0)
+            day_need_list.update({day.id:score})
+        temp_points = {u.id:u.points for u in users}
+        month_calendar.sort(key=lambda x: day_need_list[x.id])
+        for day in month_calendar:
+            #high_point records high bid, user id, and day point value
+            high_point = [-1,None,None]
+            users.sort(key=lambda x: temp_points.get(x.id,0)) # we must re sort for each day
+            for u in users:
+                for day_id,bid_value in bids.get(u.id).items():
                     if day_id==day.id:
                         if bid_value>high_point[0]:
-                            high_point=[bid_value,u.id] 
+                            high_point=[bid_value,u.id,day.value] 
             day.assigned['DO']=high_point[1]
-            temp_points.update({high_point[1]:temp_points.get(high_point[1],0)+1})
+            temp_points.update({high_point[1]:temp_points.get(high_point[1],0)+high_point[2]})
+            month_calendar.sort(key=lambda x: x.id)
     save_month(month_calendar)
     update_all_points()
     return redirect(request.referrer)
