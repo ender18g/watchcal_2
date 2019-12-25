@@ -4,7 +4,58 @@
 
 {%if current_user.is_authenticated%}
 <h1>Welcome {{current_user}}!</h1>
-<h3>you have {{current_user.points}} points</h3>
+<h3 class="my-3">You have {{current_user.points}} points</h3>
+
+<div class="my-5 w-50 container">
+
+<h3>Assigned Days:</h3>
+
+
+
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col">Date</th>
+      <th scope="col">Points</th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+{%for day in assigned_days%}
+
+
+<tr>
+
+<td>{{day.date.strftime('%a, %d %b')}}</td>
+<td>{{day.value}} </td>
+<td>
+  {%if today<day.date%}
+  <a href="http://www.google.com/calendar/event?
+action=TEMPLATE
+&text=EW Duty Officer
+&dates={{day.date.strftime('%Y%m%d')}}/{{day.date.strftime('%Y%m%d')}}
+&details=
+&location=
+&trp=false
+&sprop=
+&sprop=name:"
+target="_blank" rel="nofollow">
+  <button class="mx-4 btn btn-primary">Add to Google Calendar</button>
+  </a>
+{%endif%}
+</td>
+
+
+</tr>
+
+{%endfor%}
+  </table>
+
+
+
+
+
+
 {%else%}
 <h1> Welcome to the E&W Duty Portal</h1>
 <a href="{{url_for('register')}}"><h3>Click here to register a new account</h3></a>

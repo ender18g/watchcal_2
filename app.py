@@ -161,21 +161,21 @@ def get_month_calendar(my_date=date.today()):
     #start_index = get_date_index(first_dom-timedelta(days=first_dom.weekday()))
     start_index = get_date_index(first_dom)
     end_index = get_date_index(last_dom)
-    full_calendar=unpickle_calendar()
+    full_calendar=unpickle_var('calendar')
     month_calendar = full_calendar[start_index:end_index]
     return month_calendar
 
 
-def pickle_calendar(full_calendar):
-    with open('calendar.pickle', 'wb') as fp:
-        pickle.dump(full_calendar, fp)
+def pickle_var(my_var,file_name):
+    with open(file_name + '.pickle', 'wb') as fp:
+        pickle.dump(my_var, fp)
     return None
 
 
-def unpickle_calendar():
-    with open('calendar.pickle', 'rb') as fp:
-        full_calendar = pickle.load(fp)
-        return full_calendar
+def unpickle_var(file_name):
+    with open(file_name + '.pickle', 'rb') as fp:
+        my_var = pickle.load(fp)
+        return my_var
 
 
 def update_user_bid_dict(u_id, user_bid_dict):
@@ -194,15 +194,15 @@ def load_user_bid_dict(u_id):
     return user_bid_dict
 
 def save_month(month_calendar):
-    full_calendar=unpickle_calendar()
+    full_calendar=unpickle_var('calendar')
     start_index = month_calendar[0].id
     end_index = month_calendar[-1].id
     full_calendar[start_index:end_index+1]=month_calendar
-    pickle_calendar(full_calendar)
+    pickle_var(full_calendar,'calendar')
     return None
 
 def update_all_points():
-    full_calendar = unpickle_calendar()
+    full_calendar = unpickle_var('calendar')
     users = User.query.all()
     for u in users:
         u.update_points(full_calendar)
@@ -220,7 +220,7 @@ def seed_users(num):
     return None
 
 def seed_calendars():
-    full_calendar=unpickle_calendar()
+    full_calendar=unpickle_var('calendar')
     users = User.query.all()
     for u in users:
         user_bid_dict={}
@@ -237,11 +237,11 @@ def seed_calendars():
 # db.create_all()
 #seed_users(10)
 try: 
-    full_calendar = unpickle_calendar()
+    full_calendar = unpickle_var('calendar')
 except:
     full_calendar = [Day(n, start_date + timedelta(days=n))
                      for n in range(365*15)]
-pickle_calendar(full_calendar)
+pickle_var(full_calendar,'calendar')
 # FUNCTIONS
 
 
@@ -249,7 +249,10 @@ pickle_calendar(full_calendar)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    return render_template('welcome.html')
+    full_calendar=unpickle_var('calendar')
+    assigned_days = [day for day in full_calendar if day.assigned.get('DO')==current_user.id]
+    print(assigned_days)
+    return render_template('welcome.html',assigned_days=assigned_days,today=date.today())
 
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -397,7 +400,7 @@ def points():
 @app.route('/change', methods=["POST"])
 @login_required
 def change():
-    full_calendar=unpickle_calendar()
+    full_calendar=unpickle_var('calendar')
     day = full_calendar[int(request.form.get('day_id'))]
     day.assigned['DO']=int(request.form.get('user_id'))
     save_month([day])
