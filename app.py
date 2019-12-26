@@ -198,6 +198,7 @@ def save_month(month_calendar):
     start_index = month_calendar[0].id
     end_index = month_calendar[-1].id
     full_calendar[start_index:end_index+1]=month_calendar
+    print(full_calendar[start_index:end_index+1])
     pickle_var(full_calendar,'calendar')
     return None
 
@@ -251,6 +252,7 @@ pickle_var(full_calendar,'calendar')
 def index():
     full_calendar=unpickle_var('calendar')
     assigned_days = [day for day in full_calendar if day.assigned.get('DO')==current_user.id]
+    assigned_days.reverse()
     print(assigned_days)
     return render_template('welcome.html',assigned_days=assigned_days,today=date.today())
 
@@ -362,26 +364,28 @@ def assign_month_duty(clear,year,month):
             day.assigned={}
     else:
         bids={u.id: load_user_bid_dict(u.id) for u in users}
+        ##this determines which days have the fewest preferences - they are assigned first
         day_need_list ={}
         for day in month_calendar:
             score = 0
             for u in users:
-                    score+=bids[u.id].get(day.id,0)
+                score+=bids[u.id].get(day.id,0)
             day_need_list.update({day.id:score})
         temp_points = {u.id:u.points for u in users}
-        month_calendar.sort(key=lambda x: day_need_list[x.id])
+        month_calendar.sort(key=lambda x: day_need_list.get(x.id))
         for day in month_calendar:
-            #high_point records high bid, user id, and day point value
+            #high_point records [high bid, user id, and day point value]
             high_point = [-1,None,None]
+            #each day we re-sort the users based on how many points they have
             users.sort(key=lambda x: temp_points.get(x.id,0)) # we must re sort for each day
             for u in users:
                 for day_id,bid_value in bids.get(u.id).items():
                     if day_id==day.id:
                         if bid_value>high_point[0]:
-                            high_point=[bid_value,u.id,day.value] 
+                            high_point=[bid_value,u.id,day.value]
             day.assigned['DO']=high_point[1]
             temp_points.update({high_point[1]:temp_points.get(high_point[1],0)+high_point[2]})
-            month_calendar.sort(key=lambda x: x.id)
+        month_calendar.sort(key=lambda day: day.id)
     save_month(month_calendar)
     update_all_points()
     return redirect(request.referrer)
