@@ -17,10 +17,15 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, ValidationError, Email, EqualTo
 import names #for seeding users
 from statistics import mean
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+from flask_admin.model import BaseModelView
 
 # CONFIG
 app = Flask(__name__)
 app.config.from_object(Config)
+
+
 
 # Setup the Database:
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -32,6 +37,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 us_holidays = holidays.US()
+
+app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
+admin = Admin(app, name='Admin', template_mode='bootstrap3')
+
 
 lm = LoginManager()
 lm.init_app(app)
@@ -86,9 +95,10 @@ class User(UserMixin, db.Model):
                         unique=False, default=date.today())
     phone = db.Column(db.Integer)
     qualified = db.Column(db.Boolean, index=True, unique=False, default=False)
-    data = db.Column(db.String(32768), index=False, unique=False)
+    data = db.Column(db.String(2**30), index=False, unique=False)
     points = db.Column(db.Integer, index=True, unique=False, default=0)
     department = db.Column(db.String(128))
+    point_offset = db.Column(db.Integer, default=0)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -101,7 +111,7 @@ class User(UserMixin, db.Model):
         for day in full_calendar:
             if day.assigned.get('DO')==self.id:
                 total_points += day.value
-        self.points=total_points
+        self.points=total_points+self.point_offset
 
     def __repr__(self):
         return f"{self.first} {self.last}"
@@ -139,6 +149,10 @@ class Day():
     def __repr__(self):
         return f"{self.date.strftime('%d %b %y')}"
 # MODELS
+
+class DutyUserView(ModelView):
+    column_exclude_list = ['data','password_hash' ]
+admin.add_view(DutyUserView(User, db.session))
 
 
 # FUNCTIONS
@@ -212,12 +226,12 @@ def update_all_points():
 def seed_users(num):
     for n in range(num):
         first=names.get_first_name()
-        user = User(email=first+"gmail.com",
+        user = User(email=first+"@gmail.com",
                     first=first, last=names.get_last_name())
         user.set_password("squirrel")
         db.session.add(user)
         db.session.commit()
-        seed_calendars()
+    seed_calendars()
     return None
 
 def seed_calendars():
@@ -233,15 +247,15 @@ def seed_calendars():
 
 
 
-#seed_calendars()
-# db.drop_all()
-# db.create_all()
-#seed_users(10)
+
+db.drop_all()
+db.create_all()
+seed_users(30)
+
 try: 
     full_calendar = unpickle_var('calendar')
 except:
-    full_calendar = [Day(n, start_date + timedelta(days=n))
-                     for n in range(365*15)]
+    full_calendar = [Day(n, start_date + timedelta(days=n)) for n in range(365*15)]
 pickle_var(full_calendar,'calendar')
 # FUNCTIONS
 
@@ -351,7 +365,12 @@ def assign(year,month):
         month = 12
         year -= 1
     calendar= get_month_calendar(date(year, month, 1))
-    return render_template('assign.html', calendar=calendar, users=users, bids={u.id: load_user_bid_dict(u.id) for u in users})
+    days_by_user = {u.id:0 for u in users}
+    for day in calendar:
+        if day.assigned.get("DO"):
+            days_by_user[day.assigned.get("DO")]+=1
+    return render_template('assign.html', calendar=calendar, users=users, bids={u.id: load_user_bid_dict(u.id) for u in users},\
+        days_by_user=days_by_user)
 
 @app.route('/assign_gen/<int:clear>/<int:year>/<int:month>', methods=['POST'])
 @login_required
@@ -371,20 +390,22 @@ def assign_month_duty(clear,year,month):
             for u in users:
                 score+=bids[u.id].get(day.id,0)
             day_need_list.update({day.id:score})
-        temp_points = {u.id:u.points for u in users}
+            #temp_points tracks [points, days assigned in months] for each user
+        temp_points = {u.id:{'points':u.points, "m_days":0 } for u in users}
         month_calendar.sort(key=lambda x: day_need_list.get(x.id))
         for day in month_calendar:
             #high_point records [high bid, user id, and day point value]
             high_point = [-1,None,None]
             #each day we re-sort the users based on how many points they have
-            users.sort(key=lambda x: temp_points.get(x.id,0)) # we must re sort for each day
+            users.sort(key=lambda x: temp_points.get(x.id).get('points')) # we must re sort for each day
             for u in users:
                 for day_id,bid_value in bids.get(u.id).items():
                     if day_id==day.id:
                         if bid_value>high_point[0]:
                             high_point=[bid_value,u.id,day.value]
             day.assigned['DO']=high_point[1]
-            temp_points.update({high_point[1]:temp_points.get(high_point[1],0)+high_point[2]})
+            temp_points.update({high_point[1]:{'points': temp_points.get(high_point[1]).get('points')+high_point[2],\
+            'm_days':temp_points.get(high_point[1]).get('m_days')+1}})
         month_calendar.sort(key=lambda day: day.id)
     save_month(month_calendar)
     update_all_points()

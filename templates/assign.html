@@ -67,6 +67,7 @@
             <tr>
                 <th style="width: 2.5%;" class="mx-0 px-0" scope="col">Name</th>
                 <th style="width: 2.5%;" class="mx-0 px-0" scope="col">Points</th>
+                <th style="width: 2.5%;" class="mx-0 px-0" scope="col">Days</th>
                 {%for day in calendar%}
                 <th style="width: 2.5%;" class="text-center mx-0 px-0" scope="col">
                     <p class="d-none d-xl-table-cell">{{day.date.strftime("%a")}}</p>
@@ -82,6 +83,7 @@
             <tr>
                 <td class="mx-0 px-0">{{u.last}}</td>
                 <td class="text-center mx-0 px-0">{{u.points}}</td>
+                <td class="text-center mx-0 px-0">{{days_by_user.get(u.id)}}</td>
                 {%for day in calendar%}
                     <td class="assign_cell mx-0 px-0 rounded">
                         <form action="/change" method="post">
