@@ -99,6 +99,7 @@ class User(UserMixin, db.Model):
     points = db.Column(db.Integer, index=True, unique=False, default=0)
     department = db.Column(db.String(128))
     point_offset = db.Column(db.Integer, default=0)
+    roles=db.Column(db.String(128),default='')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -149,6 +150,7 @@ class Day():
     def __repr__(self):
         return f"{self.date.strftime('%d %b %y')}"
 # MODELS
+
 
 class DutyUserView(ModelView):
     column_exclude_list = ['data','password_hash' ]
@@ -248,9 +250,9 @@ def seed_calendars():
 
 
 
-db.drop_all()
-db.create_all()
-seed_users(30)
+# db.drop_all()
+# db.create_all()
+# seed_users(30)
 
 try: 
     full_calendar = unpickle_var('calendar')
