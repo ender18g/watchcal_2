@@ -32,12 +32,7 @@
                         <p class="text-center">Points: {{day.value}}</p>
                         <div class="form-group row d-none">
                             Bid: <input type="text" name="{{day.id}}" id="{{day.id}}"
-                                value="{% if user_bid_dict[day.id] %}
-                                {{user_bid_dict[day.id]}}
-                                {%else%}
-                                0
-                                {%endif%}
-                                "></input>
+                                value="{{ user_bid_dict.get(day.id,1) }}"></input>
                         </div>
                 </td>
 

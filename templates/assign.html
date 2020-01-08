@@ -45,9 +45,11 @@
 <tr>
 
                 {%if day.assigned.get('DO')%}
+                <td>{{day.date.strftime('%d %b %Y - %a')}}</td>
+
                     {%for u in users%}
                     {%if u.id == day.assigned.get('DO') %}
-                <td>{{day.date.strftime('%d %b %Y - %a')}}</td>
+                
                 <td>{{u}}</td>
                 <td>{{u.email}}</td>
                     {%endif%}
@@ -96,16 +98,9 @@
                         <h5 class="m-0 p-0 text-center">*</h5>
                         {%endif%}
 
-                        {%if bids[u.id][day.id]%}
-                        {%if bids[u.id][day.id]>=0%}
                         <!-- if the user has made a bid put it in here, otherwise dont put an input -->
-                        <input class="d-none" type="text" value="{{bids[u.id][day.id]}}"></input>
- 
+                        <input class="d-none" type="text" value="{{bids.get(u.id).get(day.id,-1)}}"></input>
 
-                        {%endif%}
-                        {%else%}
-                        <input class="d-none" type="text" value="0"></input>
-                        {%endif%}
                     </td>
                 {%endfor%}
 
@@ -127,6 +122,9 @@
         }
         else if ($(this).children("input").val() == 2) {
             $(this).addClass("bg-success");
+        }
+        else if ($(this).children("input").val() == -1) {
+            $(this).addClass("bg-warning");
         }
     }
 
@@ -152,6 +150,13 @@ $('#heading').click(function(){
 $('#matrix').toggleClass('d-none');
 $('#schedule').toggleClass('d-none');
 });
+
+$('td').each(function(){
+    if ($(this).children("input").val()==0 && $(this).children("h5").text()=='*'){
+        $(this).children("h5").text("-!-")
+        $('#heading').append('<h5 class=" text-center text-danger">Conflict Detected<h5>')
+    }
+})
 
 </script>
 

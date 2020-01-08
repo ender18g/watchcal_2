@@ -228,8 +228,10 @@ def update_all_points():
 def seed_users(num):
     for n in range(num):
         first=names.get_first_name()
-        user = User(email=first+"@gmail.com",
-                    first=first, last=names.get_last_name())
+        last=names.get_last_name()
+        email = first+last+"@gmail.com"
+        user = User(email=email,
+                    first=first, last=last)
         user.set_password("squirrel")
         db.session.add(user)
         db.session.commit()
@@ -251,8 +253,7 @@ def seed_calendars():
 
 
 # db.drop_all()
-# db.create_all()
-# seed_users(30)
+
 
 try: 
     full_calendar = unpickle_var('calendar')
@@ -260,11 +261,13 @@ except:
     full_calendar = [Day(n, start_date + timedelta(days=n)) for n in range(365*15)]
 pickle_var(full_calendar,'calendar')
 # FUNCTIONS
-
+#db.create_all()
+#seed_users(25)
 
 ########################  Routes ########################
 
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def index():
     full_calendar=unpickle_var('calendar')
     assigned_days = [day for day in full_calendar if day.assigned.get('DO')==current_user.id]
@@ -370,7 +373,8 @@ def assign(year,month):
     days_by_user = {u.id:0 for u in users}
     for day in calendar:
         if day.assigned.get("DO"):
-            days_by_user[day.assigned.get("DO")]+=1
+            try: days_by_user[day.assigned.get("DO")]+=1
+            except: pass
     return render_template('assign.html', calendar=calendar, users=users, bids={u.id: load_user_bid_dict(u.id) for u in users},\
         days_by_user=days_by_user)
 
@@ -395,17 +399,21 @@ def assign_month_duty(clear,year,month):
             #temp_points tracks [points, days assigned in months] for each user
         temp_points = {u.id:{'points':u.points, "m_days":0 } for u in users}
         month_calendar.sort(key=lambda x: day_need_list.get(x.id))
+        min_days=0
         for day in month_calendar:
             #high_point records [high bid, user id, and day point value]
-            high_point = [-1,None,None]
+            high_point = [-1,None,None,None]
             #each day we re-sort the users based on how many points they have
-            users.sort(key=lambda x: temp_points.get(x.id).get('points')) # we must re sort for each day
-            for u in users:
-                for day_id,bid_value in bids.get(u.id).items():
-                    if day_id==day.id:
-                        if bid_value>high_point[0]:
-                            high_point=[bid_value,u.id,day.value]
+            min_days = min([temp_points.get(x.id).get('m_days') for x in users])
+            # we must re sort for each day in order of total points
+            users.sort(key=lambda x: temp_points.get(x.id).get('points'))
+            for u in filter(lambda x: temp_points.get(x.id).get("m_days")<=min_days, users):
+                # If you don't have preferences saved, you are open to any duty day!
+                    if bids.get(u.id).get(day.id,1)>high_point[0]:
+                        high_point=[bids.get(u.id).get(day.id,0),u.id,day.value,u.email]
             day.assigned['DO']=high_point[1]
+            day.assigned['email']=high_point[3]
+            print(f"{User.query.filter_by(id=high_point[1]).first()} gets {day}")
             temp_points.update({high_point[1]:{'points': temp_points.get(high_point[1]).get('points')+high_point[2],\
             'm_days':temp_points.get(high_point[1]).get('m_days')+1}})
         month_calendar.sort(key=lambda day: day.id)
